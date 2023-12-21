@@ -1,5 +1,5 @@
 {
-	"name": "Microsoft_Graph_API",
+	"name": "API_Microsoft_Graph",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "Microsoft Graph",
@@ -9,9 +9,6 @@
 			"RelativeURL": {
 				"type": "String"
 			}
-		},
-		"folder": {
-			"name": "Generic"
 		},
 		"annotations": [],
 		"type": "RestResource",

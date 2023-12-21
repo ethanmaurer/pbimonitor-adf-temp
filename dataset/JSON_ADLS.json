@@ -1,5 +1,5 @@
 {
-	"name": "ADLS_JSON",
+	"name": "JSON_ADLS",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "pbimonitor Storage",
@@ -18,9 +18,6 @@
 			"TimeStamp": {
 				"type": "string"
 			}
-		},
-		"folder": {
-			"name": "Generic"
 		},
 		"annotations": [],
 		"type": "Json",

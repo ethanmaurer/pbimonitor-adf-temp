@@ -118,7 +118,7 @@
 				},
 				"inputs": [
 					{
-						"referenceName": "PowerBI_API_Data",
+						"referenceName": "API_PowerBI_Data",
 						"type": "DatasetReference",
 						"parameters": {
 							"AdminAPI": {
@@ -130,7 +130,7 @@
 				],
 				"outputs": [
 					{
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {
@@ -243,7 +243,7 @@
 				},
 				"inputs": [
 					{
-						"referenceName": "PowerBI_API_Data",
+						"referenceName": "API_PowerBI_Data",
 						"type": "DatasetReference",
 						"parameters": {
 							"AdminAPI": "capacities"
@@ -252,7 +252,7 @@
 				],
 				"outputs": [
 					{
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {
@@ -307,7 +307,7 @@
 						}
 					},
 					"dataset": {
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {
@@ -414,7 +414,7 @@
 							},
 							"inputs": [
 								{
-									"referenceName": "PowerBI_API_Data",
+									"referenceName": "API_PowerBI_Data",
 									"type": "DatasetReference",
 									"parameters": {
 										"AdminAPI": {
@@ -426,7 +426,7 @@
 							],
 							"outputs": [
 								{
-									"referenceName": "ADLS_JSON",
+									"referenceName": "JSON_ADLS",
 									"type": "DatasetReference",
 									"parameters": {
 										"FileSystem": {
@@ -535,7 +535,7 @@
 				},
 				"inputs": [
 					{
-						"referenceName": "Microsoft_Graph_API",
+						"referenceName": "API_Microsoft_Graph",
 						"type": "DatasetReference",
 						"parameters": {
 							"RelativeURL": "users?$select=id,mail,companyName,department,displayName,userType,assignedLicenses,onPremisesUserPrincipalName,UserPrincipalName,jobTitle,creationType,externalUserState,createdDateTime,deletedDateTime&$expand=memberOf"
@@ -544,7 +544,7 @@
 				],
 				"outputs": [
 					{
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {
@@ -650,7 +650,7 @@
 				},
 				"inputs": [
 					{
-						"referenceName": "Microsoft_Graph_API",
+						"referenceName": "API_Microsoft_Graph",
 						"type": "DatasetReference",
 						"parameters": {
 							"RelativeURL": "groups?$filter=securityEnabled eq true&$select=id,displayName,description,securityEnabled,groupTypes,createdDateTime,renewedDateTime,deletedDateTime"
@@ -659,7 +659,7 @@
 				],
 				"outputs": [
 					{
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {
@@ -765,7 +765,7 @@
 				},
 				"inputs": [
 					{
-						"referenceName": "Microsoft_Graph_API",
+						"referenceName": "API_Microsoft_Graph",
 						"type": "DatasetReference",
 						"parameters": {
 							"RelativeURL": "subscribedSkus"
@@ -774,7 +774,7 @@
 				],
 				"outputs": [
 					{
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {
@@ -829,7 +829,7 @@
 						}
 					},
 					"dataset": {
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {
@@ -978,7 +978,7 @@
 							},
 							"inputs": [
 								{
-									"referenceName": "Microsoft_Graph_API",
+									"referenceName": "API_Microsoft_Graph",
 									"type": "DatasetReference",
 									"parameters": {
 										"RelativeURL": {
@@ -990,7 +990,7 @@
 							],
 							"outputs": [
 								{
-									"referenceName": "ADLS_JSON",
+									"referenceName": "JSON_ADLS",
 									"type": "DatasetReference",
 									"parameters": {
 										"FileSystem": {
@@ -1082,7 +1082,7 @@
 				},
 				"inputs": [
 					{
-						"referenceName": "PowerBI_API_Data",
+						"referenceName": "API_PowerBI_Data",
 						"type": "DatasetReference",
 						"parameters": {
 							"AdminAPI": "pipelines?$expand=stages,users"
@@ -1091,7 +1091,7 @@
 				],
 				"outputs": [
 					{
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {
@@ -1146,7 +1146,7 @@
 						}
 					},
 					"dataset": {
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {
@@ -1253,7 +1253,7 @@
 							},
 							"inputs": [
 								{
-									"referenceName": "PowerBI_API_Data",
+									"referenceName": "API_PowerBI_Data",
 									"type": "DatasetReference",
 									"parameters": {
 										"AdminAPI": {
@@ -1265,7 +1265,7 @@
 							],
 							"outputs": [
 								{
-									"referenceName": "ADLS_JSON",
+									"referenceName": "JSON_ADLS",
 									"type": "DatasetReference",
 									"parameters": {
 										"FileSystem": {
@@ -1442,7 +1442,7 @@
 				},
 				"inputs": [
 					{
-						"referenceName": "PowerBI_API_Data",
+						"referenceName": "API_PowerBI_Data",
 						"type": "DatasetReference",
 						"parameters": {
 							"AdminAPI": "capacities/refreshables?$expand=capacity,group"
@@ -1451,7 +1451,7 @@
 				],
 				"outputs": [
 					{
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {
@@ -1664,7 +1664,7 @@
 				},
 				"inputs": [
 					{
-						"referenceName": "PowerBI_API_Data",
+						"referenceName": "API_PowerBI_Data",
 						"type": "DatasetReference",
 						"parameters": {
 							"AdminAPI": {
@@ -1676,7 +1676,7 @@
 				],
 				"outputs": [
 					{
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {
@@ -1864,7 +1864,7 @@
 				},
 				"inputs": [
 					{
-						"referenceName": "PowerBI_API_Data",
+						"referenceName": "API_PowerBI_Data",
 						"type": "DatasetReference",
 						"parameters": {
 							"AdminAPI": "workspaces/modified"
@@ -1873,7 +1873,7 @@
 				],
 				"outputs": [
 					{
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {
@@ -1928,7 +1928,7 @@
 						}
 					},
 					"dataset": {
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {
@@ -2051,13 +2051,13 @@
 				},
 				"inputs": [
 					{
-						"referenceName": "FabricAPI",
+						"referenceName": "API_Fabric",
 						"type": "DatasetReference"
 					}
 				],
 				"outputs": [
 					{
-						"referenceName": "ADLS_JSON",
+						"referenceName": "JSON_ADLS",
 						"type": "DatasetReference",
 						"parameters": {
 							"FileSystem": {

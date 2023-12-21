@@ -1,5 +1,5 @@
 {
-	"name": "FabricAPI",
+	"name": "API_Fabric",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "Fabric API",

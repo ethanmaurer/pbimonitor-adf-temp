@@ -1,5 +1,5 @@
 {
-	"name": "PowerBI_API_Data",
+	"name": "API_PowerBI_Data",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "PowerBI API",
@@ -9,9 +9,6 @@
 			"AdminAPI": {
 				"type": "string"
 			}
-		},
-		"folder": {
-			"name": "Generic"
 		},
 		"annotations": [],
 		"type": "RestResource",
