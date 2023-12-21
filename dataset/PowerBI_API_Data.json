@@ -1,0 +1,27 @@
+{
+	"name": "PowerBI_API_Data",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "PowerBI API",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"AdminAPI": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Generic"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": {
+				"value": "admin/@{dataset().AdminAPI}",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

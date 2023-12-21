@@ -1,0 +1,47 @@
+{
+	"name": "ADLS_JSON",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "pbimonitor Storage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"FileSystem": {
+				"type": "String"
+			},
+			"Folder": {
+				"type": "String"
+			},
+			"FileName": {
+				"type": "String"
+			},
+			"TimeStamp": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Generic"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().FileName",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@concat(dataset().Folder,'/',formatDateTime(dataset().TimeStamp, 'yyyy/MM/dd'))",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().FileSystem",
+					"type": "Expression"
+				}
+			}
+		},
+		"schema": {}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

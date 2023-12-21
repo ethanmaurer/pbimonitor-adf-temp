@@ -1,0 +1,14 @@
+{
+	"name": "Fabric API",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "RestService",
+		"typeProperties": {
+			"url": "https://api.fabric.microsoft.com/v1/admin",
+			"enableServerCertificateValidation": true,
+			"authenticationType": "ManagedServiceIdentity",
+			"aadResourceId": "https://analysis.windows.net/powerbi/api"
+		}
+	}
+}
