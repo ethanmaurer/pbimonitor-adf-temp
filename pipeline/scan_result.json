@@ -68,8 +68,152 @@
 							"type": "JsonWriteSettings"
 						}
 					},
-					"enableStaging": false
-				}
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"path": "['id']"
+								},
+								"sink": {
+									"name": "id",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['name']"
+								},
+								"sink": {
+									"name": "name",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['type']"
+								},
+								"sink": {
+									"name": "type",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['state']"
+								},
+								"sink": {
+									"name": "state",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['isOnDedicatedCapacity']"
+								},
+								"sink": {
+									"name": "isOnDedicatedCapacity",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['capacityId']"
+								},
+								"sink": {
+									"name": "capacityId",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['reports']"
+								},
+								"sink": {
+									"name": "reports",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['dashboards']"
+								},
+								"sink": {
+									"name": "dashboards",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['datasets']"
+								},
+								"sink": {
+									"name": "datasets",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "['dataflows']"
+								},
+								"sink": {
+									"name": "dataflows",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['ADF_PipelineRunId']"
+								},
+								"sink": {
+									"name": "ADF_PipelineRunId",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"path": "$['ADF_PipelineTriggerTime']"
+								},
+								"sink": {
+									"name": "ADF_PipelineTriggerTime",
+									"type": "DateTime"
+								}
+							}
+						],
+						"collectionReference": "$['workspaces']"
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "API_PowerBI_Data",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "JSON_ADLS",
+						"type": "DatasetReference",
+						"parameters": {
+							"FileSystem": {
+								"value": "@pipeline().parameters.StorageAccountContainer",
+								"type": "Expression"
+							},
+							"Folder": {
+								"value": "@concat(pipeline().parameters.StorageAccountFolder,'/', pipeline().parameters.Topic, '_getScanResults')",
+								"type": "Expression"
+							},
+							"FileName": {
+								"value": "@concat(pipeline().parameters.UnixTimeStamp,'/', 'scan-result.json')",
+								"type": "Expression"
+							},
+							"TimeStamp": {
+								"value": "@pipeline().parameters.TimeStamp",
+								"type": "Expression"
+							}
+						}
+					}
+				]
 			},
 			{
 				"name": "Until ScanStatus equals Succeeded",
@@ -208,6 +352,10 @@
 							"type": "Expression"
 						}
 					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Databricks",
+					"type": "LinkedServiceReference"
 				}
 			},
 			{

@@ -103,7 +103,43 @@
 									}
 								},
 								"enableStaging": false
-							}
+							},
+							"inputs": [
+								{
+									"referenceName": "API_PowerBI_Data",
+									"type": "DatasetReference",
+									"parameters": {
+										"AdminAPI": {
+											"value": "capacities/@{activity('Lookup capacities').output.value[0].value[item()].id}/users",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "JSON_ADLS",
+									"type": "DatasetReference",
+									"parameters": {
+										"FileSystem": {
+											"value": "@pipeline().parameters.StorageAccountContainer",
+											"type": "Expression"
+										},
+										"Folder": {
+											"value": "@concat(pipeline().parameters.StorageAccountFolder, '/', pipeline().parameters.topic, '_getCapacityUsers')",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "@concat(pipeline().parameters.UnixTimeStamp, '/', item(), '-capacity-users.json')",
+											"type": "Expression"
+										},
+										"TimeStamp": {
+											"value": "@pipeline().parameters.TimeStamp",
+											"type": "Expression"
+										}
+									}
+								}
+							]
 						}
 					]
 				}
@@ -143,6 +179,10 @@
 							"type": "Expression"
 						}
 					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Databricks",
+					"type": "LinkedServiceReference"
 				}
 			}
 		],

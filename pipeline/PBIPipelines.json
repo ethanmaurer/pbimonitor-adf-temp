@@ -97,12 +97,44 @@
 							"type": "AzureBlobFSWriteSettings"
 						},
 						"formatSettings": {
-							"type": "JsonWriteSettings",
-							"filePattern": "arrayOfObjects"
+							"type": "JsonWriteSettings"
 						}
 					},
 					"enableStaging": false
-				}
+				},
+				"inputs": [
+					{
+						"referenceName": "API_PowerBI_Data",
+						"type": "DatasetReference",
+						"parameters": {
+							"AdminAPI": "pipelines?$expand=stages,users"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "JSON_ADLS",
+						"type": "DatasetReference",
+						"parameters": {
+							"FileSystem": {
+								"value": "@pipeline().parameters.StorageAccountContainer",
+								"type": "Expression"
+							},
+							"Folder": {
+								"value": "@concat(pipeline().parameters.StorageAccountFolder, '/', pipeline().parameters.Topic, '_getPipelines')",
+								"type": "Expression"
+							},
+							"FileName": {
+								"value": "@concat(variables('UnixTimeStamp'),'/pipelines.json')",
+								"type": "Expression"
+							},
+							"TimeStamp": {
+								"value": "@variables('TimeStamp')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
 			},
 			{
 				"name": "Call load notebook",
@@ -139,6 +171,10 @@
 							"type": "Expression"
 						}
 					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Databricks",
+					"type": "LinkedServiceReference"
 				}
 			},
 			{
@@ -154,6 +190,10 @@
 				],
 				"userProperties": [],
 				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PBIPipelines_users",
+						"type": "PipelineReference"
+					},
 					"waitOnCompletion": true,
 					"parameters": {
 						"StorageAccountContainer": {
@@ -196,6 +236,10 @@
 				"userProperties": [],
 				"typeProperties": {
 					"notebookPath": "/Repos/kendale@carloconsultants.com/powerbi-monitor-databricks/topics/PBIPipelines/022_model"
+				},
+				"linkedServiceName": {
+					"referenceName": "Databricks",
+					"type": "LinkedServiceReference"
 				}
 			}
 		],
