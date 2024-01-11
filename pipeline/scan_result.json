@@ -1,0 +1,303 @@
+{
+	"name": "scan_result",
+	"properties": {
+		"description": "PREREQ: scan_start pipeline\n\nRecieves parameters from scan_start pipeline and calls the Post Workspace Info, Get Scan Status, and Get Workspace Info REST admin APIs.\n\nParameters:\nBatch - Received from scan_start pipeline (I don't know what this is)\n\nADF_PipelineRunId -Specifies the pipeline run ID from the previous scan_start run\n\nADF_TriggerTime - Specifies the pipeline run time from the previous scan_start run\n\nBodyExpression - List of workspaces from scan_start pipeline, required to make a scan request\n\nStorageAccountContainer - Name of the storage container for files to be saved to (should be identical throughout pipelines\n\nStorageAccountFolder - Folder/folder structure within container where files will be saved (should be identical throughout pipelines)\n\nTopic - Prefix for filenames, should match pipeline name\n\nUnixTimeStamp - From scan_start, used for file naming\n\nTimeStamp - From scan_start, used for file naming",
+		"activities": [
+			{
+				"name": "Copy workspaceInfo data to ADLS",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "Until ScanStatus equals Succeeded",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "RestSource",
+						"additionalColumns": [
+							{
+								"name": "ADF_PipelineRunId",
+								"value": {
+									"value": "@pipeline().parameters.ADF_PipelineRunId",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "ADF_PipelineTriggerTime",
+								"value": {
+									"value": "@pipeline().parameters.ADF_TriggerTime",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "processedTimeStamp",
+								"value": {
+									"value": "@pipeline().parameters.UnixTimeStamp",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "processedDate",
+								"value": {
+									"value": "@formatDateTime(pipeline().parameters.TimeStamp, 'yyyy-MM-dd')",
+									"type": "Expression"
+								}
+							}
+						],
+						"httpRequestTimeout": "00:01:40",
+						"requestInterval": "00.00:00:00.010",
+						"requestMethod": "GET"
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				}
+			},
+			{
+				"name": "Until ScanStatus equals Succeeded",
+				"description": "Wait until Scan Status API says data is ready",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "Post WorkspaceInfo",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals('Succeeded',activity('Get ScanStatus').output.status)",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Wait 10 seconds",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 10
+							}
+						},
+						{
+							"name": "Get ScanStatus",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "Wait 10 seconds",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.01:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "https://api.powerbi.com/v1.0/myorg/admin/workspaces/scanStatus/@{activity('Post WorkspaceInfo').output.id}",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "AutoResolveIntegrationRuntime",
+									"type": "IntegrationRuntimeReference"
+								},
+								"method": "GET",
+								"body": {
+									"workspaces": [
+										"f2e40aba-27dd-4bea-8dcf-85bfdd6d03e4",
+										"52f0c738-c28d-4ac3-92ee-9766865a205b"
+									]
+								},
+								"authentication": {
+									"type": "MSI",
+									"resource": "https://analysis.windows.net/powerbi/api"
+								}
+							}
+						}
+					],
+					"timeout": "0.01:00:00"
+				}
+			},
+			{
+				"name": "Post WorkspaceInfo",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.01:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://api.powerbi.com/v1.0/myorg/admin/workspaces/getInfo?lineage=True&datasourceDetails=True&datasetSchema=True&datasetExpressions=True&getArtifactUsers=True",
+					"connectVia": {
+						"referenceName": "AutoResolveIntegrationRuntime",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "POST",
+					"body": {
+						"value": "@pipeline().parameters.BodyExpression",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": "https://analysis.windows.net/powerbi/api"
+					}
+				}
+			},
+			{
+				"name": "Call load notebook",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Copy workspaceInfo data to ADLS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Repos/kendale@carloconsultants.com/powerbi-monitor-databricks/topics/scan/020_load",
+					"baseParameters": {
+						"timestamp": {
+							"value": "@pipeline().parameters.UnixTimeStamp",
+							"type": "Expression"
+						},
+						"date": {
+							"value": "@formatDateTime(pipeline().parameters.TimeStamp,'yyyy/MM/dd')",
+							"type": "Expression"
+						},
+						"topic": {
+							"value": "@pipeline().parameters.Topic",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Call flatten notebook",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Call load notebook",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Repos/kendale@carloconsultants.com/powerbi-monitor-databricks/topics/scan/021_flatten"
+				}
+			},
+			{
+				"name": "Call model notebook",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Call flatten notebook",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Repos/kendale@carloconsultants.com/powerbi-monitor-databricks/topics/scan/022_model"
+				}
+			}
+		],
+		"parameters": {
+			"Batch": {
+				"type": "string"
+			},
+			"ADF_PipelineRunId": {
+				"type": "string"
+			},
+			"ADF_TriggerTime": {
+				"type": "string"
+			},
+			"BodyExpression": {
+				"type": "string"
+			},
+			"StorageAccountContainer": {
+				"type": "string",
+				"defaultValue": "data-warehouse"
+			},
+			"StorageAccountFolder": {
+				"type": "string",
+				"defaultValue": "apiData/raw"
+			},
+			"Topic": {
+				"type": "string",
+				"defaultValue": "scan_result"
+			},
+			"UnixTimeStamp": {
+				"type": "string"
+			},
+			"TimeStamp": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"yesterday": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Power BI monitor"
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-02-19T19:48:50Z"
+	}
+}

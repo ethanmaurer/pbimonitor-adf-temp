@@ -1,0 +1,171 @@
+{
+	"name": "PBIPipelines_users",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup pipelines",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEach Pipeline",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Lookup pipelines",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@range(0, length(activity('Lookup pipelines').output.value[0].value))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Copy pipeline users",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "RestSource",
+									"additionalColumns": [
+										{
+											"name": "processedTimeStamp",
+											"value": {
+												"value": "@pipeline().parameters.UnixTimeStamp",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "processedDate",
+											"value": {
+												"value": "@formatDateTime(pipeline().parameters.TimeStamp, 'yyyy-MM-dd')",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "pipelineId",
+											"value": {
+												"value": "@activity('Lookup pipelines').output.value[0].value[item()].id",
+												"type": "Expression"
+											}
+										}
+									],
+									"httpRequestTimeout": "00:01:40",
+									"requestInterval": "00.00:00:00.010",
+									"requestMethod": "GET",
+									"paginationRules": {
+										"supportRFC5988": "true"
+									}
+								},
+								"sink": {
+									"type": "JsonSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "JsonWriteSettings"
+									}
+								},
+								"enableStaging": false
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "Call users notebook",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "ForEach Pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Repos/kendale@carloconsultants.com/powerbi-monitor-databricks/topics/PBIPipelines/021_users",
+					"baseParameters": {
+						"topic": {
+							"value": "@pipeline().parameters.topic",
+							"type": "Expression"
+						},
+						"date": {
+							"value": "@formatDateTime(pipeline().parameters.TimeStamp,'yyyy/MM/dd')",
+							"type": "Expression"
+						},
+						"timestamp": {
+							"value": "@pipeline().parameters.UnixTimeStamp",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"topic": {
+				"type": "string",
+				"defaultValue": "PBIPipelines_users"
+			},
+			"StorageAccountContainer": {
+				"type": "string"
+			},
+			"StorageAccountFolder": {
+				"type": "string"
+			},
+			"TimeStamp": {
+				"type": "string"
+			},
+			"UnixTimeStamp": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Power BI monitor"
+		},
+		"annotations": []
+	}
+}
