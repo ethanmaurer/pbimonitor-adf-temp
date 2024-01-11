@@ -1,0 +1,17 @@
+{
+	"name": "Databricks",
+	"properties": {
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-989708115254087.7.azuredatabricks.net",
+			"authentication": "MSI",
+			"workspaceResourceId": "/subscriptions/10dee940-fc11-419e-b9ad-25ab968792bb/resourceGroups/powerbi-monitor/providers/Microsoft.Databricks/workspaces/pbi-monitor-databricks-01",
+			"existingClusterId": " 0616-193642-h4u4x0fi"
+		},
+		"connectVia": {
+			"referenceName": "AutoResolveIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
