@@ -5,6 +5,11 @@
 			"referenceName": "Fabric API",
 			"type": "LinkedServiceReference"
 		},
+		"parameters": {
+			"API": {
+				"type": "string"
+			}
+		},
 		"annotations": [],
 		"type": "RestResource",
 		"schema": []
