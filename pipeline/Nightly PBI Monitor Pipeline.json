@@ -2052,7 +2052,10 @@
 				"inputs": [
 					{
 						"referenceName": "API_Fabric",
-						"type": "DatasetReference"
+						"type": "DatasetReference",
+						"parameters": {
+							"API": "tenantSettings"
+						}
 					}
 				],
 				"outputs": [
