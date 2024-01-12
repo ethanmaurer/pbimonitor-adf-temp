@@ -2054,7 +2054,7 @@
 						"referenceName": "API_Fabric",
 						"type": "DatasetReference",
 						"parameters": {
-							"API": "tenantSettings"
+							"API": "tenantsettings"
 						}
 					}
 				],
