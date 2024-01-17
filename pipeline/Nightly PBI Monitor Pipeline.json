@@ -2082,6 +2082,96 @@
 						}
 					}
 				]
+			},
+			{
+				"name": "NEW Run Databricks Delta Live Tables",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "For Each Filtered Security Group",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Copy Users",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "ForEach Capacity Id",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Copy ActivtyEvents",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Copy workspaceInfo data to ADLS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Copy subscribedSkus",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "ForEach Pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Copy Refreshables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Copy Tenant Settings",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@{pipeline().parameters.DatabricksURI}api/2.1/jobs/run-now",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "AutoResolveIntegrationRuntime",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"body": {
+						"value": "{\"job_id\": \"@{pipeline().parameters.DatabricksJobID}\"}",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": "ADD SP HERE"
+					}
+				}
 			}
 		],
 		"parameters": {
@@ -2100,6 +2190,14 @@
 			"TenantId": {
 				"type": "string",
 				"defaultValue": "72445baa-314f-4c92-9364-1cb2c4924bf6"
+			},
+			"DatabricksURI": {
+				"type": "string",
+				"defaultValue": "https://adb-6172293768963277.17.azuredatabricks.net/"
+			},
+			"DatabricksJobID": {
+				"type": "string",
+				"defaultValue": "498745434801330"
 			}
 		},
 		"variables": {
