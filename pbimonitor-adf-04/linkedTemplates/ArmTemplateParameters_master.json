@@ -1,0 +1,48 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "pbimonitor-adf-04"
+		},
+		"Databricks_properties_typeProperties_existingClusterId": {
+			"value": " 0616-193642-h4u4x0fi"
+		},
+		"Fabric API_properties_typeProperties_url": {
+			"value": "https://api.fabric.microsoft.com/v1/admin"
+		},
+		"Fabric API_properties_typeProperties_aadResourceId": {
+			"value": "https://analysis.windows.net/powerbi/api"
+		},
+		"Microsoft Graph_properties_typeProperties_url": {
+			"value": "https://graph.microsoft.com/v1.0/"
+		},
+		"Microsoft Graph_properties_typeProperties_servicePrincipalId": {
+			"value": "0e645df4-094a-4765-82c7-50d5d6c695dc"
+		},
+		"Microsoft Graph_properties_typeProperties_tenant": {
+			"value": "72445baa-314f-4c92-9364-1cb2c4924bf6"
+		},
+		"Microsoft Graph_properties_typeProperties_aadResourceId": {
+			"value": "https://graph.microsoft.com"
+		},
+		"PowerBI API_properties_typeProperties_url": {
+			"value": "https://api.powerbi.com/v1.0/myorg"
+		},
+		"PowerBI API_properties_typeProperties_aadResourceId": {
+			"value": "https://analysis.windows.net/powerbi/api"
+		},
+		"PowerBI Key Vault_properties_typeProperties_baseUrl": {
+			"value": "https://pbimonitor-kv-prod-01.vault.azure.net/"
+		},
+		"pbimonitor Storage_properties_typeProperties_url": {
+			"value": "https://pbimonitorstorage04.dfs.core.windows.net/"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}

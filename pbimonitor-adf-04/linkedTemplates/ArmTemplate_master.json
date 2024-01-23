@@ -1,0 +1,119 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "pbimonitor-adf-04"
+		},
+		"Databricks_properties_typeProperties_existingClusterId": {
+			"type": "string",
+			"defaultValue": " 0616-193642-h4u4x0fi"
+		},
+		"Fabric API_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://api.fabric.microsoft.com/v1/admin"
+		},
+		"Fabric API_properties_typeProperties_aadResourceId": {
+			"type": "string",
+			"defaultValue": "https://analysis.windows.net/powerbi/api"
+		},
+		"Microsoft Graph_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://graph.microsoft.com/v1.0/"
+		},
+		"Microsoft Graph_properties_typeProperties_servicePrincipalId": {
+			"type": "string",
+			"defaultValue": "0e645df4-094a-4765-82c7-50d5d6c695dc"
+		},
+		"Microsoft Graph_properties_typeProperties_tenant": {
+			"type": "string",
+			"defaultValue": "72445baa-314f-4c92-9364-1cb2c4924bf6"
+		},
+		"Microsoft Graph_properties_typeProperties_aadResourceId": {
+			"type": "string",
+			"defaultValue": "https://graph.microsoft.com"
+		},
+		"PowerBI API_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://api.powerbi.com/v1.0/myorg"
+		},
+		"PowerBI API_properties_typeProperties_aadResourceId": {
+			"type": "string",
+			"defaultValue": "https://analysis.windows.net/powerbi/api"
+		},
+		"PowerBI Key Vault_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://pbimonitor-kv-prod-01.vault.azure.net/"
+		},
+		"pbimonitor Storage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://pbimonitorstorage04.dfs.core.windows.net/"
+		},
+		"containerUri": {
+			"type": "string",
+			"metadata": "URI to storage account containing linked ARM templates"
+		},
+		"containerSasToken": {
+			"type": "string",
+			"metadata": "Sas token to storage account containing linked ARM templates"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "pbimonitor-adf-04_ArmTemplate_0",
+			"type": "Microsoft.Resources/deployments",
+			"apiVersion": "2018-02-01",
+			"properties": {
+				"mode": "incremental",
+				"templateLink": {
+					"uri": "[concat(parameters('containerUri'), '/ArmTemplate_0.json', parameters('containerSasToken'))]",
+					"contentVersion": "1.0.0.0"
+				},
+				"parameters": {
+					"factoryName": {
+						"value": "[parameters('factoryName')]"
+					},
+					"Fabric API_properties_typeProperties_url": {
+						"value": "[parameters('Fabric API_properties_typeProperties_url')]"
+					},
+					"Fabric API_properties_typeProperties_aadResourceId": {
+						"value": "[parameters('Fabric API_properties_typeProperties_aadResourceId')]"
+					},
+					"PowerBI Key Vault_properties_typeProperties_baseUrl": {
+						"value": "[parameters('PowerBI Key Vault_properties_typeProperties_baseUrl')]"
+					},
+					"pbimonitor Storage_properties_typeProperties_url": {
+						"value": "[parameters('pbimonitor Storage_properties_typeProperties_url')]"
+					},
+					"Databricks_properties_typeProperties_existingClusterId": {
+						"value": "[parameters('Databricks_properties_typeProperties_existingClusterId')]"
+					},
+					"Microsoft Graph_properties_typeProperties_url": {
+						"value": "[parameters('Microsoft Graph_properties_typeProperties_url')]"
+					},
+					"Microsoft Graph_properties_typeProperties_servicePrincipalId": {
+						"value": "[parameters('Microsoft Graph_properties_typeProperties_servicePrincipalId')]"
+					},
+					"Microsoft Graph_properties_typeProperties_tenant": {
+						"value": "[parameters('Microsoft Graph_properties_typeProperties_tenant')]"
+					},
+					"Microsoft Graph_properties_typeProperties_aadResourceId": {
+						"value": "[parameters('Microsoft Graph_properties_typeProperties_aadResourceId')]"
+					},
+					"PowerBI API_properties_typeProperties_url": {
+						"value": "[parameters('PowerBI API_properties_typeProperties_url')]"
+					},
+					"PowerBI API_properties_typeProperties_aadResourceId": {
+						"value": "[parameters('PowerBI API_properties_typeProperties_aadResourceId')]"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

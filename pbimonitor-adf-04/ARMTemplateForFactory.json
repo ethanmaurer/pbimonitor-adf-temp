@@ -1,0 +1,2575 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "pbimonitor-adf-04"
+		},
+		"Databricks_properties_typeProperties_existingClusterId": {
+			"type": "string",
+			"defaultValue": " 0616-193642-h4u4x0fi"
+		},
+		"Fabric API_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://api.fabric.microsoft.com/v1/admin"
+		},
+		"Fabric API_properties_typeProperties_aadResourceId": {
+			"type": "string",
+			"defaultValue": "https://analysis.windows.net/powerbi/api"
+		},
+		"Microsoft Graph_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://graph.microsoft.com/v1.0/"
+		},
+		"Microsoft Graph_properties_typeProperties_servicePrincipalId": {
+			"type": "string",
+			"defaultValue": "0e645df4-094a-4765-82c7-50d5d6c695dc"
+		},
+		"Microsoft Graph_properties_typeProperties_tenant": {
+			"type": "string",
+			"defaultValue": "72445baa-314f-4c92-9364-1cb2c4924bf6"
+		},
+		"Microsoft Graph_properties_typeProperties_aadResourceId": {
+			"type": "string",
+			"defaultValue": "https://graph.microsoft.com"
+		},
+		"PowerBI API_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://api.powerbi.com/v1.0/myorg"
+		},
+		"PowerBI API_properties_typeProperties_aadResourceId": {
+			"type": "string",
+			"defaultValue": "https://analysis.windows.net/powerbi/api"
+		},
+		"PowerBI Key Vault_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://pbimonitor-kv-prod-01.vault.azure.net/"
+		},
+		"pbimonitor Storage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://pbimonitorstorage04.dfs.core.windows.net/"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/Nightly PBI Monitor Pipeline')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "setTimestamp",
+						"description": "Set the requestId to be the date.now()",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "TimeStamp",
+							"value": {
+								"value": "@utcnow()",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "setUnixTime",
+						"description": "Set the requestId to be the date.now()",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "setTimestamp",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "UnixTimeStamp",
+							"value": {
+								"value": "@{div(sub(ticks(variables('timestamp')), ticks('1970-01-01')),10000000)}",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Copy ActivtyEvents",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"additionalColumns": [
+									{
+										"name": "processedTimeStamp",
+										"value": {
+											"value": "@variables('UnixTimeStamp')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "activityDate",
+										"value": {
+											"value": "@variables('DateToExtract')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "processedDate",
+										"value": {
+											"value": "@formatDateTime(variables('TimeStamp'), 'yyyy-MM-dd')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "TenantId",
+										"value": {
+											"value": "@pipeline().parameters.TenantId",
+											"type": "Expression"
+										}
+									}
+								],
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"AbsoluteUrl": "$.continuationUri"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings",
+									"filePattern": "arrayOfObjects"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "API_PowerBI_Data",
+								"type": "DatasetReference",
+								"parameters": {
+									"AdminAPI": {
+										"value": "activityevents?startDateTime='@{variables('DateToExtract')}T00:00:00.000Z'&endDateTime='@{variables('DateToExtract')}T23:59:59.999Z'",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder,'/', 'activityEvents')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'),'_', 'powerBI-activity.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('TimeStamp')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Set date",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "setUnixTime",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "DateToExtract",
+							"value": {
+								"value": "@{formatDateTime(getPastTime(1, 'Day'), 'yyyy-MM-dd')}",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Copy Capacities",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"additionalColumns": [
+									{
+										"name": "processedTimeStamp",
+										"value": {
+											"value": "@variables('UnixTimeStamp')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "processedDate",
+										"value": {
+											"value": "@formatDateTime(variables('TimeStamp'), 'yyyy-MM-dd')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "TenantId",
+										"value": {
+											"value": "@pipeline().parameters.TenantId",
+											"type": "Expression"
+										}
+									}
+								],
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"supportRFC5988": "true"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings",
+									"filePattern": "arrayOfObjects"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "API_PowerBI_Data",
+								"type": "DatasetReference",
+								"parameters": {
+									"AdminAPI": "capacities"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder, '/', 'capacities')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'),'_capacities.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('TimeStamp')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Lookup capacities",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Copy Capacities",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "JsonSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "JsonReadSettings"
+								}
+							},
+							"dataset": {
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder, '/', 'capacities')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'), '_capacities.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('TimeStamp')",
+										"type": "Expression"
+									}
+								}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEach Capacity Id",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Lookup capacities",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@range(0, length(activity('Lookup capacities').output.value[0].value))",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Copy capacity users",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "RestSource",
+											"additionalColumns": [
+												{
+													"name": "processedDate",
+													"value": {
+														"value": "@formatDateTime(variables('TimeStamp'),'yyyy/MM/dd')",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "processedTimeStamp",
+													"value": {
+														"value": "@variables('UnixTimeStamp')",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "capacityId",
+													"value": {
+														"value": "@activity('Lookup capacities').output.value[0].value[item()].id",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "TenantId",
+													"value": {
+														"value": "@pipeline().parameters.TenantId",
+														"type": "Expression"
+													}
+												}
+											],
+											"httpRequestTimeout": "00:01:40",
+											"requestInterval": "00.00:00:00.010",
+											"requestMethod": "GET",
+											"paginationRules": {
+												"supportRFC5988": "true"
+											}
+										},
+										"sink": {
+											"type": "JsonSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "JsonWriteSettings"
+											}
+										},
+										"enableStaging": false
+									},
+									"inputs": [
+										{
+											"referenceName": "API_PowerBI_Data",
+											"type": "DatasetReference",
+											"parameters": {
+												"AdminAPI": {
+													"value": "capacities/@{activity('Lookup capacities').output.value[0].value[item()].id}/users",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "JSON_ADLS",
+											"type": "DatasetReference",
+											"parameters": {
+												"FileSystem": {
+													"value": "@pipeline().parameters.StorageAccountContainer",
+													"type": "Expression"
+												},
+												"Folder": {
+													"value": "@concat(pipeline().parameters.StorageAccountFolder, '/', 'capacities_users')",
+													"type": "Expression"
+												},
+												"FileName": {
+													"value": "@concat(variables('UnixTimeStamp'), '_', item(), '-capacity-users.json')",
+													"type": "Expression"
+												},
+												"TimeStamp": {
+													"value": "@variables('TimeStamp')",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					},
+					{
+						"name": "Copy Users",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"additionalColumns": [
+									{
+										"name": "ADF_PipelineRunId",
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "ADF_PipelineTriggerTime",
+										"value": {
+											"value": "@pipeline().TriggerTime",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "processedTimeStamp",
+										"value": {
+											"value": "@variables('UnixTimeStamp')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "processedDate",
+										"value": {
+											"value": "@formatDateTime(variables('TimeStamp'), 'yyyy-MM-dd')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "TenantId",
+										"value": {
+											"value": "@pipeline().parameters.TenantId",
+											"type": "Expression"
+										}
+									}
+								],
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"AbsoluteUrl": {
+										"value": "$['@odata.nextLink']",
+										"type": "Expression"
+									}
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings",
+									"filePattern": "arrayOfObjects"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "API_Microsoft_Graph",
+								"type": "DatasetReference",
+								"parameters": {
+									"RelativeURL": "users?$select=id,mail,companyName,department,displayName,userType,assignedLicenses,onPremisesUserPrincipalName,UserPrincipalName,jobTitle,creationType,externalUserState,createdDateTime,deletedDateTime&$expand=memberOf"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder,'/', 'MSGraph_users')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'),'_', 'users.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('TimeStamp')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Copy Security Groups",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"additionalColumns": [
+									{
+										"name": "ADF_PipelineRunId",
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "ADF_PipelineTriggerTime",
+										"value": {
+											"value": "@pipeline().TriggerTime",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "processedTimeStamp",
+										"value": {
+											"value": "@variables('UnixTimeStamp')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "processedDate",
+										"value": {
+											"value": "@formatDateTime(variables('TimeStamp'), 'yyyy-MM-dd')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "TenantId",
+										"value": {
+											"value": "@pipeline().parameters.TenantId",
+											"type": "Expression"
+										}
+									}
+								],
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"AbsoluteUrl": {
+										"value": "$['@odata.nextLink']",
+										"type": "Expression"
+									}
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings",
+									"filePattern": "arrayOfObjects"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "API_Microsoft_Graph",
+								"type": "DatasetReference",
+								"parameters": {
+									"RelativeURL": "groups?$filter=securityEnabled eq true&$select=id,displayName,description,securityEnabled,groupTypes,createdDateTime,renewedDateTime,deletedDateTime"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder,'/', 'MSGraph_securityGroups')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'),'_', 'securityGroups.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('TimeStamp')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Copy subscribedSkus",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"additionalColumns": [
+									{
+										"name": "ADF_PipelineRunId",
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "ADF_PipelineTriggerTime",
+										"value": {
+											"value": "@pipeline().TriggerTime",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "processedTimeStamp",
+										"value": {
+											"value": "@variables('UnixTimeStamp')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "processedDate",
+										"value": {
+											"value": "@formatDateTime(variables('TimeStamp'), 'yyyy-MM-dd')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "TenantId",
+										"value": {
+											"value": "@pipeline().parameters.TenantId",
+											"type": "Expression"
+										}
+									}
+								],
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"AbsoluteUrl": {
+										"value": "$['@odata.nextLink']",
+										"type": "Expression"
+									}
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings",
+									"filePattern": "arrayOfObjects"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "API_Microsoft_Graph",
+								"type": "DatasetReference",
+								"parameters": {
+									"RelativeURL": "subscribedSkus"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder,'/', 'MSGraph_subscribedSKUs')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'),'_', 'subscribed-skus.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('TimeStamp')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Lookup Security Groups",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Copy Security Groups",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "JsonSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "JsonReadSettings"
+								}
+							},
+							"dataset": {
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder,'/', 'MSGraph_securityGroups')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'),'_', 'securityGroups.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('TimeStamp')",
+										"type": "Expression"
+									}
+								}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "Filter Security Groups",
+						"type": "Filter",
+						"dependsOn": [
+							{
+								"activity": "Lookup Security Groups",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Lookup Security Groups').output.value[0].value",
+								"type": "Expression"
+							},
+							"condition": {
+								"value": "@startswith(item().displayName, pipeline().parameters.GroupsStartswith)",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "For Each Filtered Security Group",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Filter Security Groups",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@range(0, length(activity('Filter Security Groups').output.value))",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Copy users in Security Groups",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "RestSource",
+											"additionalColumns": [
+												{
+													"name": "ADF_PipelineRunId",
+													"value": {
+														"value": "@pipeline().RunId",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "ADF_PipelineTriggerTime",
+													"value": {
+														"value": "@pipeline().TriggerTime",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "GroupId",
+													"value": {
+														"value": "@activity('Filter Security Groups').output.value[item()].id",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "processedTimeStamp",
+													"value": {
+														"value": "@variables('UnixTimeStamp')",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "processedDate",
+													"value": {
+														"value": "@formatDateTime(variables('TimeStamp'), 'yyyy-MM-dd')",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "TenantId",
+													"value": {
+														"value": "@pipeline().parameters.TenantId",
+														"type": "Expression"
+													}
+												}
+											],
+											"httpRequestTimeout": "00:01:40",
+											"requestInterval": "00.00:00:00.010",
+											"requestMethod": "GET",
+											"paginationRules": {
+												"AbsoluteUrl": {
+													"value": "$['@odata.nextLink']",
+													"type": "Expression"
+												},
+												"supportRFC5988": "true"
+											}
+										},
+										"sink": {
+											"type": "JsonSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "JsonWriteSettings",
+												"filePattern": "arrayOfObjects"
+											}
+										},
+										"enableStaging": false
+									},
+									"inputs": [
+										{
+											"referenceName": "API_Microsoft_Graph",
+											"type": "DatasetReference",
+											"parameters": {
+												"RelativeURL": {
+													"value": "groups/@{activity('Filter Security Groups').output.value[item()].id}/members",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "JSON_ADLS",
+											"type": "DatasetReference",
+											"parameters": {
+												"FileSystem": {
+													"value": "@pipeline().parameters.StorageAccountContainer",
+													"type": "Expression"
+												},
+												"Folder": {
+													"value": "@concat(pipeline().parameters.StorageAccountFolder,'/', 'MSGraph_usersInSecurityGroups')",
+													"type": "Expression"
+												},
+												"FileName": {
+													"value": "@concat(variables('UnixTimeStamp'),'_', item(),'-users-in-security-groups.json')",
+													"type": "Expression"
+												},
+												"TimeStamp": {
+													"value": "@variables('TimeStamp')",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					},
+					{
+						"name": "Copy Pipelines",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"additionalColumns": [
+									{
+										"name": "processedTimeStamp",
+										"value": {
+											"value": "@variables('UnixTimeStamp')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "processedDate",
+										"value": {
+											"value": "@formatDateTime(variables('TimeStamp'), 'yyyy-MM-dd')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "TenantId",
+										"value": {
+											"value": "@pipeline().parameters.TenantId",
+											"type": "Expression"
+										}
+									}
+								],
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"supportRFC5988": "true"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings",
+									"filePattern": "arrayOfObjects"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "API_PowerBI_Data",
+								"type": "DatasetReference",
+								"parameters": {
+									"AdminAPI": "pipelines?$expand=stages,users"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder, '/', 'PBIPipelines')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'),'_pipelines.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('TimeStamp')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Lookup pipelines",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Copy Pipelines",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "JsonSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "JsonReadSettings"
+								}
+							},
+							"dataset": {
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder, '/', 'PBIPipelines')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'),'_pipelines.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('TimeStamp')",
+										"type": "Expression"
+									}
+								}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEach Pipeline",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Lookup pipelines",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@range(0, length(activity('Lookup pipelines').output.value[0].value))",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Copy pipeline users",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "RestSource",
+											"additionalColumns": [
+												{
+													"name": "processedTimeStamp",
+													"value": {
+														"value": "@variables('UnixTimeStamp')",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "processedDate",
+													"value": {
+														"value": "@formatDateTime(variables('TimeStamp'), 'yyyy-MM-dd')",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "pipelineId",
+													"value": {
+														"value": "@activity('Lookup pipelines').output.value[0].value[item()].id",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "TenantId",
+													"value": {
+														"value": "@pipeline().parameters.TenantId",
+														"type": "Expression"
+													}
+												}
+											],
+											"httpRequestTimeout": "00:01:40",
+											"requestInterval": "00.00:00:00.010",
+											"requestMethod": "GET",
+											"paginationRules": {
+												"supportRFC5988": "true"
+											}
+										},
+										"sink": {
+											"type": "JsonSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "JsonWriteSettings"
+											}
+										},
+										"enableStaging": false
+									},
+									"inputs": [
+										{
+											"referenceName": "API_PowerBI_Data",
+											"type": "DatasetReference",
+											"parameters": {
+												"AdminAPI": {
+													"value": "pipelines/@{activity('Lookup pipelines').output.value[0].value[item()].id}/users",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "JSON_ADLS",
+											"type": "DatasetReference",
+											"parameters": {
+												"FileSystem": {
+													"value": "@pipeline().parameters.StorageAccountContainer",
+													"type": "Expression"
+												},
+												"Folder": {
+													"value": "@concat(pipeline().parameters.StorageAccountFolder, '/', 'PBIPipelines_users')",
+													"type": "Expression"
+												},
+												"FileName": {
+													"value": "@concat(variables('UnixTimeStamp'), '_', item(), '-pipeline-users.json')",
+													"type": "Expression"
+												},
+												"TimeStamp": {
+													"value": "@variables('TimeStamp')",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					},
+					{
+						"name": "Run Databricks Delta Live Tables",
+						"type": "WebActivity",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
+						"dependsOn": [
+							{
+								"activity": "For Each Filtered Security Group",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "ForEach Pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "ForEach Capacity Id",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Copy ActivtyEvents",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Copy Refreshables",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Copy workspaceInfo data to ADLS",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Copy Tenant Settings",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Copy Users",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Copy subscribedSkus",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": "https://adb-6172293768963277.17.azuredatabricks.net/api/2.1/jobs/run-now",
+							"connectVia": {
+								"referenceName": "AutoResolveIntegrationRuntime",
+								"type": "IntegrationRuntimeReference"
+							},
+							"method": "POST",
+							"headers": {
+								"Content-Type": "application/json",
+								"Authorization": "Bearer dapibb03fb2927a17f36a3a4b5ff3c77ab82-2"
+							},
+							"body": {
+								"job_id": "498745434801330"
+							}
+						}
+					},
+					{
+						"name": "Copy Refreshables",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"additionalColumns": [
+									{
+										"name": "processedDate",
+										"value": {
+											"value": "@formatDateTime(variables('TimeStamp'), 'yyyy-MM-dd')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "processedTimeStamp",
+										"value": {
+											"value": "@variables('UnixTimeStamp')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "TenantId",
+										"value": {
+											"value": "@pipeline().parameters.TenantId",
+											"type": "Expression"
+										}
+									}
+								],
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"supportRFC5988": "true"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings",
+									"filePattern": "arrayOfObjects"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "API_PowerBI_Data",
+								"type": "DatasetReference",
+								"parameters": {
+									"AdminAPI": "capacities/refreshables?$expand=capacity,group"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder, '/', 'refreshables')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'),'_', 'refreshables.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('timestamp')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Copy workspaceInfo data to ADLS",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Until ScanStatus equals Succeeded",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"additionalColumns": [
+									{
+										"name": "ADF_PipelineRunId",
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "ADF_PipelineTriggerTime",
+										"value": {
+											"value": "@pipeline().TriggerTime",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "processedTimeStamp",
+										"value": {
+											"value": "@variables('UnixTimeStamp')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "processedDate",
+										"value": {
+											"value": "@formatDateTime(variables('TimeStamp'), 'yyyy-MM-dd')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "TenantId",
+										"value": {
+											"value": "@pipeline().parameters.TenantId",
+											"type": "Expression"
+										}
+									}
+								],
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET"
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"path": "[['id']"
+										},
+										"sink": {
+											"name": "id",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"path": "[['name']"
+										},
+										"sink": {
+											"name": "name",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"path": "[['type']"
+										},
+										"sink": {
+											"name": "type",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"path": "[['state']"
+										},
+										"sink": {
+											"name": "state",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"path": "[['isOnDedicatedCapacity']"
+										},
+										"sink": {
+											"name": "isOnDedicatedCapacity",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"path": "[['capacityId']"
+										},
+										"sink": {
+											"name": "capacityId",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"path": "[['reports']"
+										},
+										"sink": {
+											"name": "reports",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"path": "[['dashboards']"
+										},
+										"sink": {
+											"name": "dashboards",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"path": "[['datasets']"
+										},
+										"sink": {
+											"name": "datasets",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"path": "[['dataflows']"
+										},
+										"sink": {
+											"name": "dataflows",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"path": "$['ADF_PipelineRunId']"
+										},
+										"sink": {
+											"name": "ADF_PipelineRunId",
+											"type": "String"
+										}
+									},
+									{
+										"source": {
+											"path": "$['ADF_PipelineTriggerTime']"
+										},
+										"sink": {
+											"name": "ADF_PipelineTriggerTime",
+											"type": "DateTime"
+										}
+									}
+								],
+								"collectionReference": "$['workspaces']"
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "API_PowerBI_Data",
+								"type": "DatasetReference",
+								"parameters": {
+									"AdminAPI": {
+										"value": "workspaces/scanResult/@{activity('Get ScanStatus').output.id}",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder,'/', 'scan_result')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'),'_', 'scan-result.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('TimeStamp')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Until ScanStatus equals Succeeded",
+						"description": "Wait until Scan Status API says data is ready",
+						"type": "Until",
+						"dependsOn": [
+							{
+								"activity": "Post WorkspaceInfo",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@equals('Succeeded',activity('Get ScanStatus').output.status)",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Wait 10 seconds",
+									"type": "Wait",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"waitTimeInSeconds": 10
+									}
+								},
+								{
+									"name": "Get ScanStatus",
+									"type": "WebActivity",
+									"dependsOn": [
+										{
+											"activity": "Wait 10 seconds",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "0.01:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": {
+											"value": "https://api.powerbi.com/v1.0/myorg/admin/workspaces/scanStatus/@{activity('Post WorkspaceInfo').output.id}",
+											"type": "Expression"
+										},
+										"connectVia": {
+											"referenceName": "AutoResolveIntegrationRuntime",
+											"type": "IntegrationRuntimeReference"
+										},
+										"method": "GET",
+										"headers": {},
+										"body": {
+											"workspaces": [
+												"f2e40aba-27dd-4bea-8dcf-85bfdd6d03e4",
+												"52f0c738-c28d-4ac3-92ee-9766865a205b"
+											]
+										},
+										"authentication": {
+											"type": "MSI",
+											"resource": "https://analysis.windows.net/powerbi/api"
+										}
+									}
+								}
+							],
+							"timeout": "0.01:00:00"
+						}
+					},
+					{
+						"name": "Post WorkspaceInfo",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "build array of workspaces",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": "https://api.powerbi.com/v1.0/myorg/admin/workspaces/getInfo?lineage=True&datasourceDetails=True&datasetSchema=True&datasetExpressions=True&getArtifactUsers=True",
+							"connectVia": {
+								"referenceName": "AutoResolveIntegrationRuntime",
+								"type": "IntegrationRuntimeReference"
+							},
+							"method": "POST",
+							"headers": {},
+							"body": {
+								"value": "{\n    \"workspaces\": @{variables('Workspaces')}\n}",
+								"type": "Expression"
+							},
+							"authentication": {
+								"type": "MSI",
+								"resource": "https://analysis.windows.net/powerbi/api"
+							}
+						}
+					},
+					{
+						"name": "Save list of workspaces",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"additionalColumns": [
+									{
+										"name": "processedDate",
+										"value": {
+											"value": "@formatDateTime(variables('TimeStamp'), 'yyyy-MM-dd')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "TenantId",
+										"value": {
+											"value": "@pipeline().parameters.TenantId",
+											"type": "Expression"
+										}
+									}
+								],
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET"
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings",
+									"filePattern": "arrayOfObjects"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "API_PowerBI_Data",
+								"type": "DatasetReference",
+								"parameters": {
+									"AdminAPI": "workspaces/modified"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder, '/scan_start')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'),'_', 'workspaces.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('TimeStamp')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Get workspaces",
+						"type": "Lookup",
+						"dependsOn": [
+							{
+								"activity": "Save list of workspaces",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.01:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "JsonSource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "JsonReadSettings"
+								}
+							},
+							"dataset": {
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder, '/', 'scan_start')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'),'_', 'workspaces.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('TimeStamp')",
+										"type": "Expression"
+									}
+								}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "build array of workspaces",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Get workspaces",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Get workspaces').output.value",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "create flat array of workspaces",
+									"type": "AppendVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "Workspaces",
+										"value": {
+											"value": "@item().id",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Copy Tenant Settings",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "Set date",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "RestSource",
+								"additionalColumns": [
+									{
+										"name": "processedTimeStamp",
+										"value": {
+											"value": "@variables('UnixTimeStamp')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "processedDate",
+										"value": {
+											"value": "@formatDateTime(variables('TimeStamp'), 'yyyy-MM-dd')",
+											"type": "Expression"
+										}
+									},
+									{
+										"name": "TenantId",
+										"value": {
+											"value": "@pipeline().parameters.TenantId",
+											"type": "Expression"
+										}
+									}
+								],
+								"httpRequestTimeout": "00:01:40",
+								"requestInterval": "00.00:00:00.010",
+								"requestMethod": "GET",
+								"paginationRules": {
+									"supportRFC5988": "true"
+								}
+							},
+							"sink": {
+								"type": "JsonSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "JsonWriteSettings"
+								}
+							},
+							"enableStaging": false
+						},
+						"inputs": [
+							{
+								"referenceName": "API_Fabric",
+								"type": "DatasetReference",
+								"parameters": {
+									"API": "tenantsettings"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "JSON_ADLS",
+								"type": "DatasetReference",
+								"parameters": {
+									"FileSystem": {
+										"value": "@pipeline().parameters.StorageAccountContainer",
+										"type": "Expression"
+									},
+									"Folder": {
+										"value": "@concat(pipeline().parameters.StorageAccountFolder, '/', 'tenantSettings')",
+										"type": "Expression"
+									},
+									"FileName": {
+										"value": "@concat(variables('UnixTimeStamp'),'_', 'tenantSettings.json')",
+										"type": "Expression"
+									},
+									"TimeStamp": {
+										"value": "@variables('TimeStamp')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "NEW Run Databricks Delta Live Tables",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "For Each Filtered Security Group",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Copy Users",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "ForEach Capacity Id",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Copy ActivtyEvents",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Copy workspaceInfo data to ADLS",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Copy subscribedSkus",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "ForEach Pipeline",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Copy Refreshables",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Copy Tenant Settings",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "@{pipeline().parameters.DatabricksURI}api/2.1/jobs/run-now",
+								"type": "Expression"
+							},
+							"connectVia": {
+								"referenceName": "AutoResolveIntegrationRuntime",
+								"type": "IntegrationRuntimeReference"
+							},
+							"method": "POST",
+							"headers": {
+								"Content-Type": "application/json"
+							},
+							"body": {
+								"value": "{\"job_id\": \"@{pipeline().parameters.DatabricksJobID}\"}",
+								"type": "Expression"
+							},
+							"authentication": {
+								"type": "MSI",
+								"resource": "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"StorageAccountContainer": {
+						"type": "string",
+						"defaultValue": "data"
+					},
+					"StorageAccountFolder": {
+						"type": "string",
+						"defaultValue": "apiData/raw"
+					},
+					"GroupsStartswith": {
+						"type": "string",
+						"defaultValue": "PBI-"
+					},
+					"TenantId": {
+						"type": "string",
+						"defaultValue": "58b6c298-ad65-4dda-8d66-a9e1e265fac1"
+					},
+					"DatabricksURI": {
+						"type": "string",
+						"defaultValue": "https://adb-6172293768963277.17.azuredatabricks.net/"
+					},
+					"DatabricksJobID": {
+						"type": "string",
+						"defaultValue": "498745434801330"
+					}
+				},
+				"variables": {
+					"TimeStamp": {
+						"type": "String"
+					},
+					"UnixTimeStamp": {
+						"type": "String"
+					},
+					"PipelineIds": {
+						"type": "Array"
+					},
+					"capacities": {
+						"type": "Array"
+					},
+					"DateToExtract": {
+						"type": "String"
+					},
+					"Workspaces": {
+						"type": "Array"
+					}
+				},
+				"folder": {
+					"name": "Power BI monitor"
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-12-21T16:39:42Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/API_PowerBI_Data')]",
+				"[concat(variables('factoryId'), '/datasets/JSON_ADLS')]",
+				"[concat(variables('factoryId'), '/datasets/API_Microsoft_Graph')]",
+				"[concat(variables('factoryId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]",
+				"[concat(variables('factoryId'), '/datasets/API_Fabric')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/API_Fabric')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Fabric API",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"API": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": {
+						"value": "@dataset().API",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/Fabric API')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/API_Microsoft_Graph')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Microsoft Graph",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"RelativeURL": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": {
+						"value": "@dataset().RelativeURL",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/Microsoft Graph')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/API_PowerBI_Data')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "PowerBI API",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"AdminAPI": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": {
+						"value": "admin/@{dataset().AdminAPI}",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/PowerBI API')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/JSON_ADLS')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "pbimonitor Storage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"FileSystem": {
+						"type": "String"
+					},
+					"Folder": {
+						"type": "String"
+					},
+					"FileName": {
+						"type": "String"
+					},
+					"TimeStamp": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().FileName",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@concat(dataset().Folder,'/',formatDateTime(dataset().TimeStamp, 'yyyy/MM/dd'))",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().FileSystem",
+							"type": "Expression"
+						}
+					}
+				},
+				"schema": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/pbimonitor Storage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Databricks')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureDatabricks",
+				"typeProperties": {
+					"domain": "https://adb-989708115254087.7.azuredatabricks.net",
+					"authentication": "MSI",
+					"workspaceResourceId": "/subscriptions/10dee940-fc11-419e-b9ad-25ab968792bb/resourceGroups/powerbi-monitor/providers/Microsoft.Databricks/workspaces/pbi-monitor-databricks-01",
+					"existingClusterId": "[parameters('Databricks_properties_typeProperties_existingClusterId')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Fabric API')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('Fabric API_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "ManagedServiceIdentity",
+					"aadResourceId": "[parameters('Fabric API_properties_typeProperties_aadResourceId')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Microsoft Graph')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('Microsoft Graph_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "AadServicePrincipal",
+					"servicePrincipalId": "[parameters('Microsoft Graph_properties_typeProperties_servicePrincipalId')]",
+					"servicePrincipalKey": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "PowerBI Key Vault",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "powerbi-client-secret"
+					},
+					"tenant": "[parameters('Microsoft Graph_properties_typeProperties_tenant')]",
+					"aadResourceId": "[parameters('Microsoft Graph_properties_typeProperties_aadResourceId')]"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/PowerBI Key Vault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PowerBI API')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('PowerBI API_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "ManagedServiceIdentity",
+					"aadResourceId": "[parameters('PowerBI API_properties_typeProperties_aadResourceId')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/PowerBI Key Vault')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureKeyVault",
+				"typeProperties": {
+					"baseUrl": "[parameters('PowerBI Key Vault_properties_typeProperties_baseUrl')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pbimonitor Storage')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('pbimonitor Storage_properties_typeProperties_url')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks",
+			"apiVersion": "2018-06-01",
+			"properties": {},
+			"dependsOn": []
+		}
+	]
+}
