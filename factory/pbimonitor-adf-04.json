@@ -1,0 +1,9 @@
+{
+	"name": "pbimonitor-adf-04",
+	"location": "northcentralus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "54435094-a4ca-4d56-a9db-a7a1c62c8c1b",
+		"tenantId": "58b6c298-ad65-4dda-8d66-a9e1e265fac1"
+	}
+}
