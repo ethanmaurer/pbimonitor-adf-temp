@@ -9,7 +9,7 @@
 		},
 		"Databricks_properties_typeProperties_existingClusterId": {
 			"type": "string",
-			"defaultValue": " 0616-193642-h4u4x0fi"
+			"defaultValue": "0124-204544-to334611"
 		},
 		"Fabric API_properties_typeProperties_url": {
 			"type": "string",
@@ -25,11 +25,11 @@
 		},
 		"Microsoft Graph_properties_typeProperties_servicePrincipalId": {
 			"type": "string",
-			"defaultValue": "0e645df4-094a-4765-82c7-50d5d6c695dc"
+			"defaultValue": "533255e1-0f02-4d8f-8c26-316161143c9e"
 		},
 		"Microsoft Graph_properties_typeProperties_tenant": {
 			"type": "string",
-			"defaultValue": "72445baa-314f-4c92-9364-1cb2c4924bf6"
+			"defaultValue": "58b6c298-ad65-4dda-8d66-a9e1e265fac1"
 		},
 		"Microsoft Graph_properties_typeProperties_aadResourceId": {
 			"type": "string",
@@ -45,7 +45,7 @@
 		},
 		"PowerBI Key Vault_properties_typeProperties_baseUrl": {
 			"type": "string",
-			"defaultValue": "https://pbimonitor-kv-prod-01.vault.azure.net/"
+			"defaultValue": "https://pbimonitor-kv-04.vault.azure.net/"
 		},
 		"pbimonitor Storage_properties_typeProperties_url": {
 			"type": "string",
@@ -1421,15 +1421,15 @@
 						},
 						"userProperties": [],
 						"typeProperties": {
-							"url": "https://adb-6172293768963277.17.azuredatabricks.net/api/2.1/jobs/run-now",
-							"connectVia": {
-								"referenceName": "AutoResolveIntegrationRuntime",
-								"type": "IntegrationRuntimeReference"
-							},
 							"method": "POST",
 							"headers": {
 								"Content-Type": "application/json",
 								"Authorization": "Bearer dapibb03fb2927a17f36a3a4b5ff3c77ab82-2"
+							},
+							"url": "https://adb-6172293768963277.17.azuredatabricks.net/api/2.1/jobs/run-now",
+							"connectVia": {
+								"referenceName": "AutoResolveIntegrationRuntime",
+								"type": "IntegrationRuntimeReference"
 							},
 							"body": {
 								"job_id": "498745434801330"
@@ -1807,6 +1807,8 @@
 									},
 									"userProperties": [],
 									"typeProperties": {
+										"method": "GET",
+										"headers": {},
 										"url": {
 											"value": "https://api.powerbi.com/v1.0/myorg/admin/workspaces/scanStatus/@{activity('Post WorkspaceInfo').output.id}",
 											"type": "Expression"
@@ -1815,8 +1817,6 @@
 											"referenceName": "AutoResolveIntegrationRuntime",
 											"type": "IntegrationRuntimeReference"
 										},
-										"method": "GET",
-										"headers": {},
 										"body": {
 											"workspaces": [
 												"f2e40aba-27dd-4bea-8dcf-85bfdd6d03e4",
@@ -1853,13 +1853,13 @@
 						},
 						"userProperties": [],
 						"typeProperties": {
+							"method": "POST",
+							"headers": {},
 							"url": "https://api.powerbi.com/v1.0/myorg/admin/workspaces/getInfo?lineage=True&datasourceDetails=True&datasetSchema=True&datasetExpressions=True&getArtifactUsers=True",
 							"connectVia": {
 								"referenceName": "AutoResolveIntegrationRuntime",
 								"type": "IntegrationRuntimeReference"
 							},
-							"method": "POST",
-							"headers": {},
 							"body": {
 								"value": "{\n    \"workspaces\": @{variables('Workspaces')}\n}",
 								"type": "Expression"
@@ -2213,6 +2213,10 @@
 						},
 						"userProperties": [],
 						"typeProperties": {
+							"method": "POST",
+							"headers": {
+								"Content-Type": "application/json"
+							},
 							"url": {
 								"value": "@{pipeline().parameters.DatabricksURI}api/2.1/jobs/run-now",
 								"type": "Expression"
@@ -2220,10 +2224,6 @@
 							"connectVia": {
 								"referenceName": "AutoResolveIntegrationRuntime",
 								"type": "IntegrationRuntimeReference"
-							},
-							"method": "POST",
-							"headers": {
-								"Content-Type": "application/json"
 							},
 							"body": {
 								"value": "{\"job_id\": \"@{pipeline().parameters.DatabricksJobID}\"}",
@@ -2439,9 +2439,9 @@
 				"annotations": [],
 				"type": "AzureDatabricks",
 				"typeProperties": {
-					"domain": "https://adb-989708115254087.7.azuredatabricks.net",
+					"domain": "https://adb-5845544566590711.11.azuredatabricks.net",
 					"authentication": "MSI",
-					"workspaceResourceId": "/subscriptions/10dee940-fc11-419e-b9ad-25ab968792bb/resourceGroups/powerbi-monitor/providers/Microsoft.Databricks/workspaces/pbi-monitor-databricks-01",
+					"workspaceResourceId": "/subscriptions/09ce68fe-0c84-4af0-9940-c0e4da2409f8/resourceGroups/pbimonitor-dl-rg-04/providers/Microsoft.Databricks/workspaces/pbimonitor-databricks-04",
 					"existingClusterId": "[parameters('Databricks_properties_typeProperties_existingClusterId')]"
 				},
 				"connectVia": {
