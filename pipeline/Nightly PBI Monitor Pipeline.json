@@ -1361,15 +1361,15 @@
 				},
 				"userProperties": [],
 				"typeProperties": {
-					"url": "https://adb-6172293768963277.17.azuredatabricks.net/api/2.1/jobs/run-now",
-					"connectVia": {
-						"referenceName": "AutoResolveIntegrationRuntime",
-						"type": "IntegrationRuntimeReference"
-					},
 					"method": "POST",
 					"headers": {
 						"Content-Type": "application/json",
 						"Authorization": "Bearer dapibb03fb2927a17f36a3a4b5ff3c77ab82-2"
+					},
+					"url": "https://adb-6172293768963277.17.azuredatabricks.net/api/2.1/jobs/run-now",
+					"connectVia": {
+						"referenceName": "AutoResolveIntegrationRuntime",
+						"type": "IntegrationRuntimeReference"
 					},
 					"body": {
 						"job_id": "498745434801330"
@@ -1747,6 +1747,7 @@
 							},
 							"userProperties": [],
 							"typeProperties": {
+								"method": "GET",
 								"url": {
 									"value": "https://api.powerbi.com/v1.0/myorg/admin/workspaces/scanStatus/@{activity('Post WorkspaceInfo').output.id}",
 									"type": "Expression"
@@ -1755,7 +1756,6 @@
 									"referenceName": "AutoResolveIntegrationRuntime",
 									"type": "IntegrationRuntimeReference"
 								},
-								"method": "GET",
 								"body": {
 									"workspaces": [
 										"f2e40aba-27dd-4bea-8dcf-85bfdd6d03e4",
@@ -1792,12 +1792,12 @@
 				},
 				"userProperties": [],
 				"typeProperties": {
+					"method": "POST",
 					"url": "https://api.powerbi.com/v1.0/myorg/admin/workspaces/getInfo?lineage=True&datasourceDetails=True&datasetSchema=True&datasetExpressions=True&getArtifactUsers=True",
 					"connectVia": {
 						"referenceName": "AutoResolveIntegrationRuntime",
 						"type": "IntegrationRuntimeReference"
 					},
-					"method": "POST",
 					"body": {
 						"value": "{\n    \"workspaces\": @{variables('Workspaces')}\n}",
 						"type": "Expression"
@@ -2151,6 +2151,10 @@
 				},
 				"userProperties": [],
 				"typeProperties": {
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
 					"url": {
 						"value": "@{pipeline().parameters.DatabricksURI}api/2.1/jobs/run-now",
 						"type": "Expression"
@@ -2158,10 +2162,6 @@
 					"connectVia": {
 						"referenceName": "AutoResolveIntegrationRuntime",
 						"type": "IntegrationRuntimeReference"
-					},
-					"method": "POST",
-					"headers": {
-						"Content-Type": "application/json"
 					},
 					"body": {
 						"value": "{\"job_id\": \"@{pipeline().parameters.DatabricksJobID}\"}",
