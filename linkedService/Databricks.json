@@ -4,10 +4,10 @@
 		"annotations": [],
 		"type": "AzureDatabricks",
 		"typeProperties": {
-			"domain": "https://adb-989708115254087.7.azuredatabricks.net",
+			"domain": "https://adb-5845544566590711.11.azuredatabricks.net",
 			"authentication": "MSI",
-			"workspaceResourceId": "/subscriptions/10dee940-fc11-419e-b9ad-25ab968792bb/resourceGroups/powerbi-monitor/providers/Microsoft.Databricks/workspaces/pbi-monitor-databricks-01",
-			"existingClusterId": " 0616-193642-h4u4x0fi"
+			"workspaceResourceId": "/subscriptions/09ce68fe-0c84-4af0-9940-c0e4da2409f8/resourceGroups/pbimonitor-dl-rg-04/providers/Microsoft.Databricks/workspaces/pbimonitor-databricks-04",
+			"existingClusterId": "0124-204544-to334611"
 		},
 		"connectVia": {
 			"referenceName": "AutoResolveIntegrationRuntime",
